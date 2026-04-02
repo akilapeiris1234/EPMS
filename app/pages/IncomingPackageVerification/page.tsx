@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
@@ -30,7 +30,7 @@ const batchPackagesData: Record<string, { mode: string; trackingNumbers: string[
   "000007": { mode: "single", trackingNumbers: ["TRK-007"] },
 };
 
-export default function IncomingVerificationPage() {
+function IncomingVerificationContent() {
   const searchParams = useSearchParams();
   const packageId = searchParams.get("id") || "";
   
@@ -84,7 +84,7 @@ export default function IncomingVerificationPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 800));
 
-      console.log("✅ Incoming Package Verification Submitted (with Guard):", finalData);
+      console.log("Incoming Package Verification Submitted (with Guard):", finalData);
 
       // Reset form after success
       setFormData(incomingPackageVerificationDefaults);
@@ -297,5 +297,13 @@ function InputLabel({ label }: { label: string }) {
     <label className="block text-xl font-medium text-[#2d3748] mb-3 ml-1">
       {label}
     </label>
+  );
+}
+
+export default function IncomingVerificationPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+      <IncomingVerificationContent />
+    </Suspense>
   );
 }
