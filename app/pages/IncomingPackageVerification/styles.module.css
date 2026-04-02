@@ -1,0 +1,24 @@
+.form-input-essilor {
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  background-color: #f1f3f5;
+  border: 1px solid #ced4da;
+  border-radius: 0.75rem;
+  outline: none;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.form-input-essilor:focus {
+  background-color: #fff;
+  border-color: #0084c8;
+  box-shadow: 0 0 0 4px rgba(0, 132, 200, 0.1);
+}
+
+.form-input-essilor:read-only {
+  background-color: #e2e8f0;
+  cursor: not-allowed;
+  color: #666;
+}

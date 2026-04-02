@@ -1,0 +1,22 @@
+.form-input-custom {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #f1f3f5;
+  border: 1px solid #ced4da;
+  border-radius: 0.5rem;
+  outline: none;
+  font-size: 1rem;
+  color: #495057;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.form-input-custom:focus {
+  background-color: #ffffff;
+  border-color: #0084c8;
+  box-shadow: 0 0 0 3px rgba(0, 132, 200, 0.1);
+}
+
+.form-input-readonly {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
