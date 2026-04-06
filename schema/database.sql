@@ -95,14 +95,11 @@ CREATE TABLE OutgoingPackages (
 
     HoldingState BIT DEFAULT 0,
     HoldingReason NVARCHAR(500),
-
     GuardVerificationStatus NVARCHAR(50) DEFAULT 'pending',
     GuardId NVARCHAR(100),
     GuardName NVARCHAR(150),
     GuardVerifiedAt DATETIME,
-
     VerifiedAt DATETIME,
-
     CreatedAt DATETIME DEFAULT GETDATE(),
     UpdatedAt DATETIME DEFAULT GETDATE()
 );
@@ -115,13 +112,13 @@ CREATE TABLE GateRecords (
     PersonnelId NVARCHAR(100) NOT NULL,
     Name NVARCHAR(150),
     Category NVARCHAR(100),
-    Type NVARCHAR(50), -- employee / visitor
-
+    Type NVARCHAR(50) NOT NULL, 
+    EntryTime NVARCHAR(50),
     ExitTime NVARCHAR(50),
-    ReturnTime NVARCHAR(50),
-
+    DriverName NVARCHAR(150),
+    VehicleType NVARCHAR(50),
+    PlateNumber NVARCHAR(50),
     Date NVARCHAR(50),
-
     CreatedAt DATETIME DEFAULT GETDATE()
 );
 
@@ -180,6 +177,8 @@ CREATE INDEX IX_Users_Email ON Users(Email);
 
 CREATE INDEX IX_GateRecords_PersonnelId ON GateRecords(PersonnelId);
 CREATE INDEX IX_GateRecords_Date ON GateRecords(Date);
+CREATE INDEX IX_GateRecords_Type ON GateRecords(Type);
+CREATE INDEX IX_GateRecords_PlateNumber ON GateRecords(PlateNumber);
 
 CREATE INDEX IX_AccessIds_AccessId ON AccessIds(AccessId);
 CREATE INDEX IX_AccessIds_Username ON AccessIds(Username);
