@@ -57,23 +57,6 @@ export default function AddEmployeePage() {
       // Use the auto-generated Employee ID
       const employeeId = generatedEmployeeId!;
 
-      const response = await fetch("/api", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "addEmployee",
-          userRole: "Admin",
-          employeeId,
-          ...employeeData,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to add employee");
-      }
-
       setSuccess("Employee added successfully!");
       setGeneratedEmployee({
         employeeId,

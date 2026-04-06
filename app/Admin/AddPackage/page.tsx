@@ -24,12 +24,6 @@ export default function AddPackagePage() {
       href: "/Admin/AddPackage/AddCustomer",
       icon: "👥",
     },
-    {
-      title: "Add Delivery Information",
-      description: "Enter delivery person and company details",
-      href: "/Admin/AddPackage/AddDelivery",
-      icon: "🚚",
-    },
   ];
 
   return (

@@ -125,7 +125,7 @@ export default function BatchIncomingPackagePage() {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      console.log("✅ Batch Incoming Packages Submitted (with Guard):", finalData);
+      console.log(" Batch Incoming Packages Submitted (with Guard):", finalData);
 
       setFormData({
         ...incomingPackageDefaults,

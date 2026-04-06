@@ -223,7 +223,7 @@ export default function BatchOutgoingPackagePage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
               <div className="md:col-span-6">
-                <InputLabel label="Reference Number (Batch ID)" />
+                <InputLabel label="Reference Number" />
                 <input
                   type="text"
                   className="form-input-clean bg-[#e9ecef]"

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
-import { User, Briefcase, Scan, History, ArrowRightLeft, UserCheck } from "lucide-react";
+import { User, Briefcase, Scan, History, ArrowRightLeft, UserCheck, Truck } from "lucide-react";
 
 interface GateRecord {
   id: string;
@@ -12,15 +12,23 @@ interface GateRecord {
   category: string;
   entryTime: string;
   exitTime?: string;
-  type: "employee" | "visitor";
+  type: "employee" | "visitor" | "vehicle";
   date: string;
+  details?: {
+    driverName?: string;
+    vehicleType?: string;
+    plateNumber?: string;
+  };
 }
 
 export default function GateControlPage() {
-  const [mode, setMode] = useState<"employee" | "visitor">("employee");
+  const [mode, setMode] = useState<"employee" | "visitor" | "vehicle">("employee");
   const [idInput, setIdInput] = useState("");
   const [visitorName, setVisitorName] = useState("");
   const [reason, setReason] = useState("");
+  const [driverName, setDriverName] = useState("");
+  const [vehicleType, setVehicleType] = useState("Van");
+  const [plateNumber, setPlateNumber] = useState("");
   
   const [outsideList, setOutsideList] = useState<GateRecord[]>(() => {
     if (typeof window !== "undefined") {
@@ -34,16 +42,43 @@ export default function GateControlPage() {
   });
 
   const handleRecordExit = () => {
-    if (!idInput) return;
+    if (mode === "vehicle") {
+      if (!plateNumber) return;
+    } else {
+      if (!idInput) return;
+    }
 
     const now = new Date();
+    let recordName = "";
+    let recordCategory = "";
+    let recordId = "";
+
+    if (mode === "employee") {
+      recordName = "Employee " + idInput;
+      recordCategory = "";
+      recordId = idInput;
+    } else if (mode === "visitor") {
+      recordName = visitorName || "Visitor";
+      recordCategory = reason || "General Visit";
+      recordId = idInput;
+    } else if (mode === "vehicle") {
+      recordName = plateNumber || "Vehicle";
+      recordCategory = vehicleType;
+      recordId = plateNumber;
+    }
+
     const newExit: GateRecord = {
-      id: idInput,
-      name: mode === "employee" ? "Employee " + idInput : visitorName || "Visitor",
-      category: mode === "employee" ? "" : reason || "General Visit",
+      id: recordId,
+      name: recordName,
+      category: recordCategory,
       entryTime: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: mode,
       date: now.toLocaleDateString(),
+      details: mode === "vehicle" ? {
+        driverName: driverName,
+        vehicleType: vehicleType,
+        plateNumber: plateNumber
+      } : undefined
     };
 
     const updatedOutsideList = [newExit, ...outsideList];
@@ -54,9 +89,14 @@ export default function GateControlPage() {
     const existingRecords = allRecords ? JSON.parse(allRecords) : [];
     localStorage.setItem("gateRecords", JSON.stringify([...existingRecords, newExit]));
     
-    setIdInput("");
+    if (mode !== "vehicle") {
+      setIdInput("");
+    }
     setVisitorName("");
     setReason("");
+    setDriverName("");
+    setVehicleType("Van");
+    setPlateNumber("");
   };
 
   const handleRecordReturn = (id: string) => {
@@ -97,8 +137,7 @@ export default function GateControlPage() {
             <Link 
               href="/pages/AllEntryExitRecords"
               className="flex items-center gap-2 px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-bold text-sm shadow-md transition-all active:scale-95"
-            >
-              <History size={18} /> View History
+            >View History
             </Link>
           </div>
         </header>
@@ -111,12 +150,12 @@ export default function GateControlPage() {
           <div className="xl:col-span-4 space-y-8">
             <section>
               <h2 className="text-xl font-semibold text-[#4a5568] mb-6 flex items-center gap-2">
-                <Scan size={20} className="text-blue-500" /> Recording Exit
+                <Scan size={20} className="text-blue-500" /> {mode === "employee" ? "Recording Exit" : mode === "visitor" ? "Recording Visitor Entry" : "Recording Vehicle Entry"}
               </h2>
               
               <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-6">
                 {/* Toggle */}
-                <div className="flex bg-gray-100 p-1 rounded-xl">
+                <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
                   <button 
                     onClick={() => setMode("employee")}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-sm transition-all ${
@@ -132,6 +171,14 @@ export default function GateControlPage() {
                     }`}
                   >
                     <Briefcase size={18} /> Visitor
+                  </button>
+                  <button 
+                    onClick={() => setMode("vehicle")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-sm transition-all ${
+                      mode === "vehicle" ? "bg-white text-[#0c244c] shadow-sm" : "text-gray-500"
+                    }`}
+                  >
+                    <Truck size={18} /> Vehicle
                   </button>
                 </div>
 
@@ -162,28 +209,59 @@ export default function GateControlPage() {
                     </>
                   )}
 
-                  <div>
-                    <InputLabel label="Scan ID Card / Entry ID *" />
-                    <div className="relative">
-                      <input
-                        type="text"
-                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-mono text-lg text-center"
-                        value={idInput}
-                        onChange={(e) => setIdInput(e.target.value)}
-                        placeholder="Scan now..."
-                      />
-                      <Scan className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
+                  {mode === "vehicle" && (
+                    <>
+                      <div>
+                        <InputLabel label="Vehicle Type *" />
+                        <select
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                          value={vehicleType}
+                          onChange={(e) => setVehicleType(e.target.value)}
+                        >
+                          <option value="Van">Van</option>
+                          <option value="Truck">Truck</option>
+                          <option value="Car">Car</option>
+                          <option value="Motorcycle">Motorcycle</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <InputLabel label="License Plate *" />
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-mono uppercase"
+                          value={plateNumber}
+                          onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
+                          placeholder="e.g. ABC-1234"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {mode !== "vehicle" && (
+                    <div>
+                      <InputLabel label="Scan ID Card / Entry ID *" />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-mono text-lg text-center"
+                          value={idInput}
+                          onChange={(e) => setIdInput(e.target.value)}
+                          placeholder="Scan now..."
+                        />
+                        <Scan className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={20} />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <button
                   type="button"
                   onClick={handleRecordExit}
-                  disabled={!idInput}
+                  disabled={(mode !== "vehicle" && !idInput) || (mode === "vehicle" && !plateNumber)}
                   className="w-full bg-[#0084c8] hover:bg-[#0071ad] disabled:bg-gray-300 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95"
                 >
-                  Confirm Exit
+                  {mode === "employee" ? "Confirm Exit" : mode === "visitor" ? "Record Visitor Entry" : "Record Vehicle Entry"}
                 </button>
               </div>
             </section>
@@ -194,10 +272,10 @@ export default function GateControlPage() {
             <section>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-[#4a5568] flex items-center gap-2">
-                  <ArrowRightLeft size={20} className="text-blue-500" /> Currently Outside
+                  <ArrowRightLeft size={20} className="text-blue-500" /> {mode === "employee" ? "Currently Outside" : "Currently On Premise"}
                 </h2>
                 <span className={`px-4 py-1 rounded-lg text-xs font-black uppercase tracking-widest ${
-                  mode === "employee" ? "bg-[#e2f9ec] text-[#34d399]" : "bg-[#fef3c7] text-[#f59e0b]"
+                  mode === "employee" ? "bg-[#e2f9ec] text-[#34d399]" : mode === "vehicle" ? "bg-[#dbeafe] text-[#0284c7]" : "bg-[#fef3c7] text-[#f59e0b]"
                 }`}>
                   {mode}s: {filteredList.length}
                 </span>
@@ -211,8 +289,6 @@ export default function GateControlPage() {
                 <div className="col-span-3 text-right">Action</div>
               </div>
 
-              {/* List */}
-              <div className="space-y-4">
                 {filteredList.length === 0 ? (
                   <div className="bg-white border-2 border-dashed border-gray-100 rounded-2xl py-20 flex flex-col items-center text-gray-300">
                     <UserCheck size={48} className="mb-2 opacity-20" />
@@ -230,6 +306,7 @@ export default function GateControlPage() {
                         <div className="col-span-4">
                           <p className="font-bold text-[#0c244c]">{record.name}</p>
                           <p className="text-[10px] text-gray-400 uppercase tracking-tight">{record.category}</p>
+
                         </div>
 
                         <div className="col-span-3 text-center">
@@ -243,14 +320,13 @@ export default function GateControlPage() {
                             onClick={() => handleRecordReturn(record.id)}
                             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
                           >
-                            Mark Return
+                            {mode === "employee" ? "Mark Return" : "Mark Exit"}
                           </button>
                         </div>
                       </div>
                     </div>
                   ))
                 )}
-              </div>
             </section>
           </div>
         </div>

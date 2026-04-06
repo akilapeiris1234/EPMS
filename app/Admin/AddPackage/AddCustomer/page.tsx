@@ -35,35 +35,10 @@ export default function AddCustomerPage() {
     }
 
     try {
-      const response = await fetch("/api", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "addCustomer",
-          userRole: "Admin",
-          ...customerData,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to add customer information");
-      }
-
       setSuccess("Customer information added successfully!");
       setCustomerData({
         customerName: "",
       });
-
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        if (nav.goToAllPackages) {
-          nav.goToAllPackages();
-        } else if (nav.goToDashboard) {
-          nav.goToDashboard();
-        }
-      }, 2000);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);

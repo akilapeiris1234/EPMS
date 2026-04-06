@@ -12,8 +12,13 @@ interface GateRecord {
   category: string;
   entryTime: string;
   exitTime?: string;
-  type: "employee" | "visitor";
+  type: "employee" | "visitor" | "vehicle";
   date: string;
+  details?: {
+    driverName?: string;
+    vehicleType?: string;
+    plateNumber?: string;
+  };
 }
 
 export default function AllEntryExitRecordsPage() {
@@ -25,7 +30,7 @@ export default function AllEntryExitRecordsPage() {
     return [];
   });
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "employee" | "visitor">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "employee" | "visitor" | "vehicle">("all");
 
   const filteredRecords = useMemo(() => {
     let filtered = records;
@@ -67,11 +72,12 @@ export default function AllEntryExitRecordsPage() {
         <hr className="border-gray-200 mb-8" />
 
         {/* --- STATS SECTION (System Style) --- */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <StatBox label="Total Records" value={filteredRecords.length} color="blue" />
           <StatBox label="Employees" value={filteredRecords.filter(r => r.type === "employee").length} color="green" />
           <StatBox label="Visitors" value={filteredRecords.filter(r => r.type === "visitor")?.length || 0} color="yellow" />
-          <StatBox label="Still Outside" value={filteredRecords.filter(r => !r.exitTime).length} color="red" notify={filteredRecords.filter(r => !r.exitTime).length > 0} />
+          <StatBox label="Vehicles" value={filteredRecords.filter(r => r.type === "vehicle")?.length || 0} color="purple" />
+          <StatBox label="Still On Premise" value={filteredRecords.filter(r => !r.exitTime).length} color="red" notify={filteredRecords.filter(r => !r.exitTime).length > 0} />
         </div>
 
         {/* --- CONTROLS (Search & Filter) --- */}
@@ -89,19 +95,20 @@ export default function AllEntryExitRecordsPage() {
 
           <select 
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as "all" | "employee" | "visitor")}
+            onChange={(e) => setTypeFilter(e.target.value as "all" | "employee" | "visitor" | "vehicle")}
             className="px-4 py-2 bg-white border border-gray-100 rounded-lg shadow-sm text-sm font-bold text-[#2d3748] outline-none cursor-pointer"
           >
             <option value="all">All Types</option>
             <option value="employee">Employees</option>
             <option value="visitor">Visitors</option>
+            <option value="vehicle">Vehicles</option>
           </select>
         </div>
 
         {/* --- DESKTOP TABLE HEADERS (System Colors) --- */}
         <div className="hidden lg:grid grid-cols-11 gap-2 px-8 mb-4 text-[#f87171] font-bold text-sm uppercase tracking-wider">
           <div className="col-span-2">
-            {typeFilter === "employee" ? "Employee ID" : typeFilter === "visitor" ? "Visitor ID" : "Personnel ID"}
+            {typeFilter === "employee" ? "Employee ID" : typeFilter === "visitor" ? "Visitor ID" : typeFilter === "vehicle" ? "License Plate" : "Personnel ID"}
           </div>
           <div className="col-span-3">Personnel Name</div>
           <div className="col-span-2 text-center">Type</div>
@@ -132,7 +139,7 @@ export default function AllEntryExitRecordsPage() {
 
                   <div className="col-span-2 flex justify-center">
                     <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                      record.type === "employee" ? "bg-[#e2f9ec] text-[#34d399]" : "bg-[#fef3c7] text-[#f59e0b]"
+                      record.type === "employee" ? "bg-[#e2f9ec] text-[#34d399]" : record.type === "visitor" ? "bg-[#fef3c7] text-[#f59e0b]" : "bg-[#dbeafe] text-[#0284c7]"
                     }`}>
                       {record.type}
                     </span>
@@ -142,7 +149,7 @@ export default function AllEntryExitRecordsPage() {
                     <span className={`px-3 py-1 rounded-md text-[10px] font-bold ${
                       record.exitTime ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-600"
                     }`}>
-                      {record.exitTime ? "Returned" : "Outside"}
+                      {record.type === "employee" ? (record.exitTime ? "Returned" : "Still Outside") : (record.exitTime ? "Exit" : "On Premise")}
                     </span>
                   </div>
 
@@ -151,7 +158,7 @@ export default function AllEntryExitRecordsPage() {
                     <span className="font-bold">{record.entryTime}</span>
                     <span className="mx-2 text-gray-300">→</span>
                     <span className={record.exitTime ? "font-bold text-green-600" : "font-bold text-red-600"}>
-                      {record.exitTime || "Pending"}
+                      {record.exitTime || "—"}
                     </span>
                   </div>
                 </div>
@@ -161,16 +168,16 @@ export default function AllEntryExitRecordsPage() {
                   <div className="flex justify-between items-center border-b border-gray-50 pb-3">
                     <span className="font-black text-[#0c244c] tracking-tighter">{record.id}</span>
                     <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${
-                      record.type === "employee" ? "bg-[#e2f9ec] text-[#34d399]" : "bg-[#fef3c7] text-[#f59e0b]"
+                      record.type === "employee" ? "bg-[#e2f9ec] text-[#34d399]" : record.type === "visitor" ? "bg-[#fef3c7] text-[#f59e0b]" : "bg-[#dbeafe] text-[#0284c7]"
                     }`}>
                       {record.type}
                     </span>
                   </div>
                   <div className="text-sm font-bold">{record.name}</div>
                   <div className="flex justify-between text-xs font-medium text-gray-500">
-                    <span>{record.entryTime} - {record.exitTime || "Still Out"}</span>
+                    <span>{record.entryTime} - {record.exitTime || "—"}</span>
                     <span className={record.exitTime ? "text-green-600" : "text-orange-600"}>
-                      {record.exitTime ? "Returned" : "Outside"}
+                      {record.type === "employee" ? (record.exitTime ? "Returned" : "Still Outside") : (record.exitTime ? "Exit" : "On Premise")}
                     </span>
                   </div>
                 </div>
@@ -184,12 +191,13 @@ export default function AllEntryExitRecordsPage() {
 }
 
 // System-styled Stat Box
-function StatBox({ label, value, color, notify }: { label: string, value: number, color: "blue" | "green" | "yellow" | "red", notify?: boolean }) {
-  const colorMap: Record<"blue" | "green" | "yellow" | "red", string> = {
+function StatBox({ label, value, color, notify }: { label: string, value: number, color: "blue" | "green" | "yellow" | "red" | "purple", notify?: boolean }) {
+  const colorMap: Record<"blue" | "green" | "yellow" | "red" | "purple", string> = {
     blue: "border-blue-100",
     green: "border-green-100",
     yellow: "border-yellow-100",
-    red: "border-red-300"
+    red: "border-red-300",
+    purple: "border-indigo-100"
   };
   
   return (
