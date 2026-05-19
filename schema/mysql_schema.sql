@@ -365,3 +365,34 @@ ON DUPLICATE KEY UPDATE `Value` = `Value`;
 -- =============================================================================
 -- END OF SCHEMA
 -- =============================================================================
+
+
+-- 1. Create Admin User
+INSERT INTO Users (AccessId, Username, PasswordHash, FullName, Role, Department, Company, IsActive)
+VALUES (
+    'ADMIN001',
+    'admin',
+    '$2b$10$slYQmyNdGzin7olVCburCOYz6TtxMQJqhN8/LewY5YmMXWHaDy1K2',  -- bcrypt hash of "Admin@123"
+    'System Administrator',
+    'admin',
+    'Administration',
+    'System',
+    1
+);
+
+-- 2. Create Admin Permissions (all permissions enabled)
+INSERT INTO UserPermissions (AccessId, 
+    AddOngoingPackage, AddIncomePackage, AllPackagesView, AllPackagesEdit, AllPackagesDelete,
+    OutgoingVerification, IncomeVerification, AccessManagementAdd, AccessManagementEdit, AccessManagementControl,
+    LoginMonitoring, ReportAccess, EntryExitRecording, VerifyHoldingPackages, OverdueEmployeeAlert,
+    GuardManagementAdd, GuardManagementEdit, GuardManagementDelete, GuardManagementView,
+    AddPackageEmployee, AddPackageDescription, AddPackageCustomer, AddPackageDelivery,
+    AllEntryExitRecordsExport, EmployeeVerifiedIdView)
+VALUES ('ADMIN001',
+    1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1,
+    1, 1, 1, 1,
+    1, 1, 1, 1,
+    1, 1
+);
