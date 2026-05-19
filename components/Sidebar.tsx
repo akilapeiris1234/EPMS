@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
 import { useNavigation } from '@/hooks/useNavigation';
+import { GateRecordRow } from '@/utils/formTypes';
+import { OVERDUE_POLL_INTERVAL_MS } from '@/utils/overdueConfig';
 import {
-  LayoutGrid,
   Package,
   PackageSearch,
   ClipboardList,
@@ -16,26 +16,143 @@ import {
   X,
   Shield,
   LogIn,
-  AlertCircle
+  AlertCircle,
+  Monitor
 } from 'lucide-react';
 
 interface NavLink {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   iconSize?: string;
+  badge?: number;
   onClick: () => void;
 }
 
 export default function Sidebar() {
-  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const nav = useNavigation();
+  const [overdueCount, setOverdueCount] = useState(0);
+  const [overdueHours, setOverdueHours] = useState<number | null>(null);
+  const [canShowOverdueAlert, setCanShowOverdueAlert] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  const navLinks: NavLink[] = [
-    { label: 'Dashboard', icon: LayoutGrid, onClick: () => { nav.goToDashboard(); setIsOpen(false); } }
-  ];
+  useEffect(() => {
+    let mounted = true;
+    async function loadOverdueHours() {
+      try {
+        const res = await fetch('/api/admin/overdue');
+        const data = await res.json();
+        if (!data?.success || !mounted) return;
+        const value = parseInt(String(data.value ?? ''), 10);
+        if (!Number.isNaN(value) && value > 0) {
+          setOverdueHours(value);
+        }
+      } catch {
+        // no fallback; wait for admin-configured value
+      }
+    }
+
+    void loadOverdueHours();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Fetch current user role
+  useEffect(() => {
+    let mounted = true;
+    async function loadUserRole() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (mounted && data?.data?.role) {
+          setUserRole(data.data.role);
+        }
+      } catch {
+        // silent fail
+      }
+    }
+    void loadUserRole();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadOverduePermission() {
+      try {
+        const res = await fetch('/api/permissions/me');
+        const data = await res.json();
+        if (!mounted || !res.ok || !data?.success) {
+          return;
+        }
+
+        setCanShowOverdueAlert(Boolean(data?.data?.overdueEmployeeAlert));
+      } catch {
+        if (mounted) {
+          setCanShowOverdueAlert(false);
+        }
+      }
+    }
+
+    void loadOverduePermission();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Poll for overdue employees using configured threshold every 60 s
+  useEffect(() => {
+    async function poll() {
+      if (!canShowOverdueAlert) {
+        setOverdueCount(0);
+        return;
+      }
+
+      if (overdueHours === null) {
+        setOverdueCount(0);
+        return;
+      }
+      try {
+        const res  = await fetch('/api/gate-records?type=employee');
+        const data = await res.json();
+        if (!data.success) return;
+        
+        const count = (data.data as GateRecordRow[]).filter((r) => {
+          if (r.exitTime || !r.entryTime) return false;
+          
+          // Parse entry time (format: "HH:MM AM/PM")
+          const timeMatch = r.entryTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+          if (!timeMatch) return false;
+          
+          let hours = parseInt(timeMatch[1], 10);
+          const minutes = parseInt(timeMatch[2], 10);
+          const period = timeMatch[3].toUpperCase();
+          
+          // Convert to 24-hour format
+          if (period === 'PM' && hours !== 12) hours += 12;
+          if (period === 'AM' && hours === 12) hours = 0;
+          
+          // Create a date object for today with entry time
+          const entryDate = new Date();
+          entryDate.setHours(hours, minutes, 0, 0);
+          
+          const now = Date.now();
+          const diffH = (now - entryDate.getTime()) / 3_600_000;
+          return diffH >= overdueHours;
+        }).length;
+        setOverdueCount(count);
+      } catch { /* silent */ }
+    }
+    poll();
+    const id = setInterval(poll, OVERDUE_POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [overdueHours, canShowOverdueAlert]);
 
   const outgoingLinks: NavLink[] = [
     { label: 'Add New Package', icon: Package, onClick: () => { nav.goToOutgoingPackages(); setIsOpen(false); } }
@@ -48,17 +165,35 @@ export default function Sidebar() {
   const otherLinks: NavLink[] = [
     { label: 'View all packages', icon: PackageSearch, onClick: () => { nav.goToAllPackages(); setIsOpen(false); } },
     { label: 'Report', icon: ClipboardList, onClick: () => { nav.goToReport(); setIsOpen(false); } },
-    { label: 'Entry & Exit Recording', icon: LogIn, onClick: () => { nav.goToEntryExitRecording(); setIsOpen(false); } },
+    { label: 'Entry & Exit Recording', icon: LogIn, badge: overdueCount > 0 ? overdueCount : undefined, onClick: () => { nav.goToEntryExitRecording(); setIsOpen(false); } },
     { label: 'Verify Outgoing Packages', icon: PackageOpen, iconSize: 'h-7 w-7', onClick: () => { nav.goToAllOutgoingPackages(); setIsOpen(false); } },
     { label: 'Verify Incoming Packages', icon: PackageCheck, iconSize: 'h-7 w-7', onClick: () => { nav.goToAllIncomingPackages(); setIsOpen(false); } },
     { label: 'Verify Holding Packages', icon: AlertCircle, iconSize: 'h-7 w-7', onClick: () => { nav.goToHoldingVerification(); setIsOpen(false); } },
   ];
 
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // ignore logout errors and still route the user out
+    }
+
+    nav.goToLogin();
+    setIsOpen(false);
+    setIsLoggingOut(false);
+  };
+
   return (
     <>
       {/* --- MOBILE TOP BAR --- */}
       <div className="lg:hidden flex items-center justify-between bg-white border-b px-4 py-3 fixed top-0 w-full z-50">
-        <div className="relative w-24 h-8">
+        <div className="relative w-20 h-7">
           <Image
             src="/logo/essilor.png"
             alt="Essilor Logo"
@@ -79,17 +214,17 @@ export default function Sidebar() {
           className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
           onClick={toggleSidebar}
         />
-      )}
+      )} <br />
 
       {/* --- SIDEBAR --- */}
       <aside className={`
-        fixed left-0 top-0 h-screen w-72 bg-[#e5e5e5] text-[#52525b] flex-col z-50 border-r border-gray-300 shadow-sm transition-transform duration-300 ease-in-out
+        fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-full bg-[#e5e5e5] text-[#52525b] flex flex-col overflow-hidden z-50 border-r border-gray-300 shadow-sm transition-transform duration-300 ease-in-out lg:top-0 lg:h-screen lg:w-72
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
         
         {/* Logo Section */}
-        <div className="bg-white p-6 flex justify-center items-center h-24 lg:h-32 shrink-0">
-          <div className="relative w-40 h-20">
+        <div className="bg-[#e5e5e5] border-b border-gray-300/60 px-3 py-2 flex justify-center items-center h-14 lg:h-16 shrink-0">
+          <div className="relative w-28 h-12">
             <Image
               src="/logo/essilor.png"
               alt="Essilor Logo"
@@ -102,49 +237,45 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-0 py-6">
-          <div className="px-4 mb-4">
-            {navLinks.map((link) => {
-              const isActive = pathname === nav.routes.DASHBOARD;
-              return (
-                <button key={link.label} onClick={link.onClick} className={`relative w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all group ${isActive ? 'text-[#6366f1]' : 'hover:bg-gray-200/80 hover:text-gray-900'}`}>
-                  {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-16 h-12 bg-indigo-500/20 blur-xl -ml-4 rounded-full pointer-events-none" />}
-                  <link.icon className={`h-6 w-6 z-10 ${isActive ? 'text-[#6366f1]' : 'text-gray-500 group-hover:text-gray-900'}`} />
-                  <span className={`font-bold text-lg z-10 ${isActive ? 'opacity-100' : 'opacity-80'}`}>{link.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
+        <nav className="flex-1 min-h-0 px-0 py-2">
           <NavSection title="Outgoing Package" links={outgoingLinks} onItemClick={() => setIsOpen(false)} />
           <NavSection title="Incoming Package" links={incomingLinks} onItemClick={() => setIsOpen(false)} />
           
-          <div className="mt-4 border-t border-gray-300/60 pt-4 space-y-1 px-4">
+          <div className="mt-1 border-t border-gray-300/60 pt-2 space-y-0.5 px-4">
             {otherLinks.map((link) => (
               <SidebarItem key={link.label} link={link} onClick={() => setIsOpen(false)} />
             ))}
           </div>
 
-          {/* Access Management Section */}
-          <div className="mt-4 border-t border-gray-300/60 pt-4">
-            <h3 className="px-8 text-[14px] font-semibold text-gray-500/80 uppercase tracking-wider mb-2">Administration</h3>
+          {/* Admin Section - Only for admin and superAdmin */}
+          <div className={`mt-1 border-t border-gray-300/60 pt-2 transition-all duration-300 ${
+            userRole === 'admin' || userRole === 'superAdmin' ? 'opacity-100 visible' : 'opacity-0 invisible h-0'
+          }`}>
+            <h3 className="px-8 text-[10px] font-semibold text-gray-500/80 uppercase tracking-wider mb-1">Administration</h3>
             <div className="px-4">
               <button
                 onClick={() => { nav.goToAllUsers(); setIsOpen(false); }}
-                className="w-full flex items-center gap-4 rounded-xl px-4 py-3 transition-all duration-200 hover:bg-gray-200/80 text-gray-600 hover:text-gray-900 group"
+                className="w-full flex items-center gap-3 rounded-xl px-4 py-2 transition-all duration-200 hover:bg-gray-200/80 text-gray-600 hover:text-gray-900 group"
               >
-                <Shield className="h-6 w-6 text-gray-800/90 group-hover:scale-110 transition-transform" />
-                <span className="font-bold text-sm opacity-90 group-hover:opacity-100">Access Management</span>
+                <Shield className="h-5 w-5 text-gray-800/90 group-hover:scale-110 transition-transform" />
+                <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100">Access Management</span>
+              </button>
+              <button
+                onClick={() => { nav.goToLoginMonitor(); setIsOpen(false); }}
+                className="w-full flex items-center gap-3 rounded-xl px-4 py-2 transition-all duration-200 hover:bg-gray-200/80 text-gray-600 hover:text-gray-900 group"
+              >
+                <Monitor className="h-5 w-5 text-gray-800/90 group-hover:scale-110 transition-transform" />
+                <span className="font-bold text-[13px] opacity-90 group-hover:opacity-100">Login Monitor</span>
               </button>
             </div>
           </div>
         </nav>
 
         {/* Logout */}
-        <div className="p-8 mt-auto border-t border-gray-300/40">
-          <button className="flex items-center justify-center gap-3 w-full group transition-all">
-            <LogOut className="h-6 w-6 text-gray-600 group-hover:text-red-600 transition-colors" />
-            <span className="font-semibold text-lg text-gray-600 group-hover:text-red-600 transition-colors">Log Out</span>
+        <div className="shrink-0 border-t border-gray-300/40 px-6 py-2.5">
+          <button onClick={() => void handleLogout()} className="flex items-center justify-center gap-3 w-full group transition-all rounded-xl px-4 py-2.5 hover:bg-gray-200/80">
+            <LogOut className="h-5 w-5 text-gray-600 group-hover:text-red-600 transition-colors" />
+            <span className="font-semibold text-[13px] text-gray-600 group-hover:text-red-600 transition-colors">{isLoggingOut ? 'Logging out...' : 'Log Out'}</span>
           </button>
         </div>
       </aside>
@@ -164,13 +295,17 @@ function NavSection({ title, links, onItemClick }: { title: string, links: NavLi
     </div>
   );
 }
-
 function SidebarItem({ link, onClick }: { link: NavLink, onClick: () => void }) {
   const iconSize = link.iconSize || 'h-6 w-6';
   return (
     <button onClick={() => { link.onClick(); onClick(); }} className="w-full flex items-center gap-4 rounded-xl px-4 py-3 transition-all duration-200 hover:bg-gray-200/80 text-gray-600 hover:text-gray-900 group">
       <link.icon className={`${iconSize} text-gray-800/90 group-hover:scale-110 transition-transform`} />
-      <span className="font-bold text-sm opacity-90 group-hover:opacity-100">{link.label}</span>
+      <span className="font-bold text-sm opacity-90 group-hover:opacity-100 flex-1 text-left">{link.label}</span>
+      {link.badge !== undefined && link.badge > 0 && (
+        <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-600 text-white text-[10px] font-black animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.8)]">
+          {link.badge > 9 ? '9+' : link.badge}
+        </span>
+      )}
     </button>
   );
 }
