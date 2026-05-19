@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import AlertModal from "@/components/AlertModal";
@@ -37,6 +37,28 @@ interface PackageData {
 }
 
 export default function IncomingPackageUpdatePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <IncomingPackageUpdateContent />
+    </Suspense>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+      <Sidebar />
+      <main className="flex-1 lg:ml-72 p-6 md:p-12 pt-24 lg:pt-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#0084c8]"></div>
+          <p className="mt-4 text-gray-600">Loading package details...</p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function IncomingPackageUpdateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const trackingNumber = searchParams.get("trackingNumber");

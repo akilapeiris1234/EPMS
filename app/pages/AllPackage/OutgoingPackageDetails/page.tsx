@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import DateTime from "@/components/DateTime";
@@ -62,6 +62,28 @@ interface PackageData {
 }
 
 export default function OutgoingPackageDetailPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <OutgoingPackageDetailContent />
+    </Suspense>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+      <Sidebar />
+      <main className="flex-1 lg:ml-72 p-6 md:p-12 pt-24 lg:pt-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#0084c8]"></div>
+          <p className="mt-4 text-gray-600">Loading package details...</p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function OutgoingPackageDetailContent() {
   const searchParams = useSearchParams();
   const trackingNumber = searchParams.get("trackingNumber");
   const { goToOutgoingPackageUpdate } = useNavigation();

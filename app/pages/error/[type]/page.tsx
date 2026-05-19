@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use, useState, useEffect, Suspense } from "react";
 import Sidebar from "@/components/Sidebar";
 import { AlertCircle } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -35,6 +35,28 @@ const errorConfig = {
 };
 
 export default function ErrorPage({ params }: ErrorPageProps) {
+  return (
+    <Suspense fallback={<ErrorLoadingFallback />}>
+      <ErrorPageContent params={params} />
+    </Suspense>
+  );
+}
+
+function ErrorLoadingFallback() {
+  return (
+    <div className="flex min-h-screen bg-[#f8f9fc] font-sans text-[#2d3748]">
+      <Sidebar />
+      <main className="flex-1 lg:ml-72 p-6 md:p-12 pt-24 lg:pt-12 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#0084c8]"></div>
+          <p className="mt-4 text-gray-600">Loading error details...</p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function ErrorPageContent({ params }: ErrorPageProps) {
   const resolvedParams = use(params);
   const searchParams = useSearchParams();
   const router = useRouter();
