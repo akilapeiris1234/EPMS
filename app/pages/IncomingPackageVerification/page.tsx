@@ -328,12 +328,12 @@ function IncomingVerificationContent() {
               </h1>
               <p className="text-sm text-gray-600 mt-1">Verify incoming packages before acceptance</p>
             </div>
-            <Image 
-              src="/images/IncomingPage.png" 
-              alt="Incoming Package Verification" 
+            <Image
+              src="/images/IncomingPage.png"
+              alt="Incoming Package Verification"
               width={192}
               height={192}
-              className="w-48 h-48 object-contain shrink-0"
+              className="w-48 h-auto object-contain shrink-0"
             />
           </div>
           <div className="w-full md:w-auto">

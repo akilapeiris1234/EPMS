@@ -393,7 +393,7 @@ export default function BatchIncomingPackagePage() {
               alt="Incoming Package"
               width={192}
               height={192}
-              className="object-contain shrink-0"
+              className="h-auto object-contain shrink-0"
             />
           </div>
           <div className="w-full md:w-auto">

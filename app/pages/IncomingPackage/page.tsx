@@ -26,12 +26,12 @@ export default function IncomingPackageHubPage() {
               </h1>
               <p className="text-sm text-gray-600 mt-1">Register packages that are arriving at the Company</p>
             </div>
-            <Image 
-              src="/images/IncomingPage.png" 
-              alt="Incoming Package" 
+            <Image
+              src="/images/IncomingPage.png"
+              alt="Incoming Package"
               width={192}
               height={192}
-              className="object-contain shrink-0"
+              className="h-auto object-contain shrink-0"
             />
           </div>
           <div className="w-full md:w-auto">
@@ -52,7 +52,7 @@ export default function IncomingPackageHubPage() {
                   alt="Single Package"
                   width={200}
                   height={150}
-                  className="object-cover rounded-lg mb-4"
+                  className="w-full h-auto object-cover rounded-lg mb-4"
                 />
                 <h2 className="text-2xl font-bold text-[#0c244c] mb-3">
                   Single Package
@@ -73,7 +73,7 @@ export default function IncomingPackageHubPage() {
                   alt="Batch Packages"
                   width={200}
                   height={150}
-                  className="object-cover rounded-lg mb-4"
+                  className="w-full h-auto object-cover rounded-lg mb-4"
                 />
                 <h2 className="text-2xl font-bold text-[#0c244c] mb-3">
                   Mulitiple Packages
