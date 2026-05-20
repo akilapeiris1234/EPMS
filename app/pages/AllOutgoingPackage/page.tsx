@@ -26,6 +26,7 @@ interface DisplayPackage {
 export default function OutgoingPackagesPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [packagesList, setPackagesList] = useState<DisplayPackage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,8 +168,13 @@ export default function OutgoingPackagesPage() {
                 type="text"
                 placeholder="Search"
                 className="w-full pl-4 pr-10 py-2 bg-white border border-gray-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setSearchQuery(inputValue);
+                  }
+                }}
               />
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             </div>

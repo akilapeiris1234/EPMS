@@ -8,6 +8,7 @@ import RecordVerificationModal from "@/components/RecordVerificationModal";
 import OverdueEmployeeAlert from "@/components/OverdueEmployeeAlert";
 import { GateRecordRow, EmployeeData } from "@/utils/formTypes";
 import { searchEmployees } from "@/lib/api/employees";
+import { normalizePlate, validateSriLankanPlate } from "@/utils/plateValidator";
 import {
   User, Briefcase, Scan, ArrowRightLeft, UserCheck,
   Truck, RefreshCw, AlertCircle, CheckCircle,
@@ -31,6 +32,7 @@ export default function GateControlPage() {
   const [driverName, setDriverName] = useState("");
   const [vehicleType, setVehicleType] = useState("Van");
   const [plateNumber, setPlateNumber] = useState("");
+  const [plateValidationError, setPlateValidationError] = useState<string | null>(null);
   const [exitReason, setExitReason] = useState("");
 
   const [activeRecords, setActiveRecords] = useState<GateRecordRow[]>([]);
@@ -144,10 +146,59 @@ export default function GateControlPage() {
     fetchActiveRecords();
   }, [fetchActiveRecords]);
 
+  // Clear validation errors when mode changes
+  useEffect(() => {
+    if (mode !== "vehicle") {
+      setPlateValidationError(null);
+      setPlateNumber("");
+    }
+  }, [mode]);
+
+  // Validate license plate on Enter key
+  const handlePlateKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const normalized = normalizePlate(plateNumber);
+      setPlateNumber(normalized);
+      const validationMsg = validateSriLankanPlate(normalized);
+      if (validationMsg.startsWith("Valid")) {
+        setPlateValidationError(null);
+      } else {
+        setPlateValidationError(validationMsg);
+      }
+    }
+  };
+
+  // Validate license plate on blur
+  const handlePlateBlur = () => {
+    const normalized = normalizePlate(plateNumber);
+    if (normalized !== plateNumber) {
+      setPlateNumber(normalized);
+    }
+    if (plateNumber.trim()) {
+      const validationMsg = validateSriLankanPlate(normalized);
+      if (!validationMsg.startsWith("Valid")) {
+        setPlateValidationError(validationMsg);
+      } else {
+        setPlateValidationError(null);
+      }
+    }
+  };
+
   //  Handle entry / recording 
   const handleRecordEntry = async () => {
     if (mode !== "vehicle" && !idInput.trim()) return;
     if (mode === "vehicle" && !plateNumber.trim()) return;
+    
+    // Validate plate if in vehicle mode
+    if (mode === "vehicle") {
+      const validationMsg = validateSriLankanPlate(plateNumber);
+      if (!validationMsg.startsWith("Valid")) {
+        setPlateValidationError(validationMsg);
+        showToast(validationMsg, "error");
+        return;
+      }
+    }
 
     const now = new Date();
     const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -424,11 +475,26 @@ export default function GateControlPage() {
                         <InputLabel label="License Plate *" />
                         <input
                           type="text"
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm font-mono uppercase"
+                          className={`w-full px-4 py-3 bg-white border rounded-lg focus:outline-none focus:ring-2 text-sm font-mono uppercase ${
+                            plateValidationError
+                              ? "border-red-500 focus:ring-red-400"
+                              : "border-gray-200 focus:ring-blue-400"
+                          }`}
                           value={plateNumber}
-                          onChange={(e) => setPlateNumber(e.target.value.toUpperCase())}
+                          onChange={(e) => {
+                            setPlateNumber(e.target.value.toUpperCase());
+                            if (plateValidationError) setPlateValidationError(null);
+                          }}
+                          onKeyDown={handlePlateKeyDown}
+                          onBlur={handlePlateBlur}
                           placeholder="e.g. ABC-1234"
                         />
+                        {plateValidationError && (
+                          <p className="mt-1 text-sm text-red-600 font-medium flex items-center gap-1">
+                            <AlertCircle size={14} />
+                            {plateValidationError}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <InputLabel label="Driver Name" />
